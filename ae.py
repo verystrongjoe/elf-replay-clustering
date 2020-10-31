@@ -8,6 +8,7 @@ import timeit
 import random
 import datetime
 from pytictoc import TicToc
+import argslist
 
 use_cuda = torch.cuda.is_available()
 device = torch.device("cuda:0" if use_cuda else "cpu")
@@ -34,11 +35,11 @@ class Encoder(nn.Module):
         )
 
     def forward(self, x):
-        x = x.reshape((self.batch_size, self.seq_len, self.n_features))
+        x = x.reshape((-1, self.seq_len, self.n_features))
         x, (_, _) = self.rnn1(x)
         x, (_, _) = self.rnn2(x)
         x = x.transpose(0,1).contiguous()
-        return x.reshape((self.batch_size, self.seq_len, self.embedding_dim))
+        return x.reshape((-1, self.seq_len, self.embedding_dim))
 
 
 class Decoder(nn.Module):
@@ -66,16 +67,16 @@ class Decoder(nn.Module):
         x, (hidden_n, cell_n) = self.rnn1(x)
         x, (hidden_n, cell_n) = self.rnn2(x)
         x = x.transpose(0,1).contiguous()
-        x = x.reshape((self.batch_size * self.seq_len, self.hidden_dim))
+        x = x.reshape((-1, self.seq_len, self.hidden_dim))
         x = self.output_layer(x)
-        x = x.reshape((self.batch_size, self.seq_len, self.n_features))
+        x = x.reshape((-1, self.seq_len, self.n_features))
         return x
 
 class RecurrentAutoencoder(nn.Module):
     def __init__(self, seq_len, n_features, embedding_dim=10):
         super(RecurrentAutoencoder, self).__init__()
-        self.encoder = Encoder(seq_len, n_features, embedding_dim).to(device)
-        self.decoder = Decoder(seq_len, embedding_dim, n_features).to(device)
+        self.encoder = Encoder(seq_len, n_features, embedding_dim, argslist.batch_size).to(device)
+        self.decoder = Decoder(seq_len, embedding_dim, n_features, argslist.batch_size).to(device)
     def forward(self, x):
         x = self.encoder(x)
         x = self.decoder(x)

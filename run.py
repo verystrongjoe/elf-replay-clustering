@@ -14,18 +14,16 @@ n_features = 400
 
 use_cuda = torch.cuda.is_available()
 device = torch.device("cuda:0" if use_cuda else "cpu")
-model = RecurrentAutoencoder(seq_len, n_features, 10)
-model = model.to(device)
+print(device)
+
 
 def train_model(model, train_dataset_iter, n_epochs):
   optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
   criterion = nn.L1Loss(reduction='sum').to(device)
-  history = dict(train=[], val=[])
-  best_model_wts = copy.deepcopy(model.state_dict())
-  for epoch in range(1, n_epochs + 1):
-    model = model.train()
-    train_losses = []
+  model.train()
 
+  train_losses = []
+  for epoch in range(1, n_epochs + 1):
     for seq_true in train_dataset_iter:
       seq_true = seq_true['input']
       optimizer.zero_grad()
@@ -35,13 +33,17 @@ def train_model(model, train_dataset_iter, n_epochs):
       loss.backward()
       optimizer.step()
       train_losses.append(loss.item())
-
   max_loss = np.max(train_losses)
   losses_normalized = train_losses / max_loss
-  return losses_normalized, model
+  # model.save('model.pt')
+  with open('model.pt', 'wb') as f:
+    torch.save(model, f)
+
+  return losses_normalized
 
 def eval_model(model, val_dataset):
-  criterion = nn.L1Loss(reduction='sum').to(device)
+  # criterion = nn.L1Loss(reduction='sum').to(device)
+  criterion = nn.MSELoss(reduction='sum').to(device)
   best_loss = 10000.0
   val_losses = []
   model = model.eval()
@@ -68,16 +70,15 @@ def make_batch(samples):
   return {'input': padded_inputs.contiguous()}
 
 
-dataset = CustomDataset('model_45252', "simple", 50)
-data_loader = DataLoader(dataset, batch_size=5, collate_fn=make_batch)
-data_loader_iterator = iter(data_loader)
+dataset = CustomDataset(["model_45252"], ["simple", "hit_run"], ["20", "50","80"])
+X_train_iter = DataLoader(dataset, batch_size=64, collate_fn=make_batch)
 
-X_train_iter = DataLoader(dataset, batch_size=5, collate_fn=make_batch)
+model = RecurrentAutoencoder(seq_len, n_features, 10)
+model = model.to(device)
 
-loss, model = train_model(
+loss = train_model(
   model,
   X_train_iter,
   n_epochs=150
 )
-
 print(f'loss : {loss} ')

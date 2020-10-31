@@ -8,11 +8,16 @@ import warnings
 warnings.filterwarnings("ignore")
 from argslist import *
 
+
 class CustomDataset(Dataset):
 
-    def __init__(self, model_name, style, frame_skip):
-        self.root_dir = home_dir + f"/{model_name}/save_npz/{style}/{frame_skip}/"
-        self.datalist = os.listdir(self.root_dir)
+    def __init__(self, model_names=["model_45252","model_9996"], styles=["hit_run","simple"], frame_skips=["20", "50","80"]):
+        self.datalist = []
+        for m in model_names:
+            for s in styles:
+                for f in frame_skips:
+                    self.root_dir = home_dir + f"/{m}/save_npz/{s}/{f}/"
+                    self.datalist.extend(os.listdir(self.root_dir))
 
     def __len__(self):
         return len(self.datalist)

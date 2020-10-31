@@ -54,7 +54,6 @@ output.size(), output_lengths
 packed_output[0]
 output
 
-
 import pandas as pd
 
 def color_white(val):
@@ -87,4 +86,3 @@ df.style.applymap(color_white).apply(color_red, axis=1)
 hidden[-1]
 
 packed_output[0], packed_output[1]
-
