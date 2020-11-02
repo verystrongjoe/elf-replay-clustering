@@ -1,7 +1,5 @@
-import os
-import numpy as np
-from torch.utils.data import Dataset, DataLoader
-from utils.my_dataset import CustomDataset
+from torch.utils.data import DataLoader
+from my_dataset import CustomDataset
 import torch
 
 def make_batch(samples):

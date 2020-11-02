@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader
 from deprecated.rnn_vae import RnnVae, RnnType, Parameters
-from utils.my_dataset import CustomDataset
+from my_dataset import CustomDataset
 from argslist import *
 
 

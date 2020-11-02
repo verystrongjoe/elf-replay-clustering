@@ -1,84 +1,77 @@
-import torch
-import torch.nn as nn
-import numpy as np
-import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader
-from deprecated.rnn_vae import RnnVae, RnnType, Parameters
-from utils.my_dataset import CustomDataset
-from argslist import *
+from my_dataset import CustomDataset
 from ae import *
-import copy
-
-seq_len = 22
-n_features = 400
 
 use_cuda = torch.cuda.is_available()
 device = torch.device("cuda:0" if use_cuda else "cpu")
 print(device)
 
-
 def train_model(model, train_dataset_iter, n_epochs):
-  optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-  criterion = nn.L1Loss(reduction='sum').to(device)
+  optimizer = torch.optim.Adam(model.parameters(), lr=argslist.lr)
+  criterion = nn.MSELoss(reduction='mean').to(device)
   model.train()
-
   train_losses = []
   for epoch in range(1, n_epochs + 1):
-    for seq_true in train_dataset_iter:
-      seq_true = seq_true['input']
+    epoch_loss = 0.
+    for it, seq_true in enumerate(train_dataset_iter):
+      seq_true = seq_true["input"]
       optimizer.zero_grad()
       seq_true = seq_true.to(device)
-      seq_pred = model(seq_true)
+      seq_pred, _ = model(seq_true, seq_true.shape[0])
       loss = criterion(seq_pred, seq_true)
       loss.backward()
       optimizer.step()
-      train_losses.append(loss.item())
-  max_loss = np.max(train_losses)
-  losses_normalized = train_losses / max_loss
-  # model.save('model.pt')
+      epoch_loss += loss.item()
+    print(f"{epoch} epoch loss : {epoch_loss / 12002}")
+    train_losses.append(epoch_loss)
+
   with open('model.pt', 'wb') as f:
     torch.save(model, f)
+  return train_losses
 
-  return losses_normalized
 
-def eval_model(model, val_dataset):
-  # criterion = nn.L1Loss(reduction='sum').to(device)
-  criterion = nn.MSELoss(reduction='sum').to(device)
-  best_loss = 10000.0
-  val_losses = []
+def get_ouput_values_from_encoder(model, dataset_iter):
   model = model.eval()
+  latents = []
+  types = []
   with torch.no_grad():
-    for seq_true in val_dataset:
-      seq_true = seq_true.to(device)
-      seq_pred = model(seq_true)
-      loss = criterion(seq_pred, seq_true)
-      val_losses.append(loss.item())
-  # train_loss = np.mean(train_losses)
-  val_loss = np.mean(val_losses)
-  # history['train'].append(train_loss)
-  if val_loss < best_loss:
-    best_loss = val_loss
-    best_model_wts = copy.deepcopy(model.state_dict())
-  # print(f'Epoch {epoch}: train loss {train_loss} val loss {val_loss}')
-  model.load_state_dict(best_model_wts)
-  return val_loss, model.eval()
+    for it, seq_true in enumerate(dataset_iter):
+      btypes = seq_true["type"]
+      inputs = seq_true["input"]
+      inputs = inputs.to(device)
+      _, encoder_output = model(inputs, inputs.shape[0])
+      latents.append(encoder_output[:,-1].detach().cpu().numpy())
+      types.extend(btypes)
+  latents = np.concatenate(latents, axis=0)
+  types = np.asarray(types)
+  return latents, types
 
 
 def make_batch(samples):
-  inputs = [torch.tensor(sample) for sample in samples]
+  inputs = [torch.tensor(sample[0]) for sample in samples]
+  types = [sample[1].item() for sample in samples]
   padded_inputs = torch.nn.utils.rnn.pad_sequence(inputs, batch_first=True)
-  return {'input': padded_inputs.contiguous()}
+  return {'input': padded_inputs.contiguous(), 'type':types}
 
 
-dataset = CustomDataset(["model_45252"], ["simple", "hit_run"], ["20", "50","80"])
+dataset = CustomDataset()
 X_train_iter = DataLoader(dataset, batch_size=64, collate_fn=make_batch)
 
-model = RecurrentAutoencoder(seq_len, n_features, 10)
-model = model.to(device)
+# model = RecurrentAutoencoder(argslist.n_features, 20, 10)
+# model = model.to(device)
+#
+# loss = train_model(
+#   model,
+#   X_train_iter,
+#   n_epochs=argslist.n_epoch
+# )
 
-loss = train_model(
-  model,
-  X_train_iter,
-  n_epochs=150
-)
-print(f'loss : {loss} ')
+with open('model.pt', 'rb') as f:
+  model = torch.load(f)
+
+model.eval()
+
+i, l = get_ouput_values_from_encoder(model, X_train_iter)
+
+np.save('input.dat', i)
+np.save('label.dat', l)
