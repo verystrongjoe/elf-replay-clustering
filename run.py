@@ -6,6 +6,7 @@ use_cuda = torch.cuda.is_available()
 device = torch.device("cuda:0" if use_cuda else "cpu")
 print(device)
 
+
 def train_model(model, train_dataset_iter, n_epochs):
   optimizer = torch.optim.Adam(model.parameters(), lr=argslist.lr)
   criterion = nn.MSELoss(reduction='mean').to(device)
@@ -57,14 +58,14 @@ def make_batch(samples):
 dataset = CustomDataset()
 X_train_iter = DataLoader(dataset, batch_size=64, collate_fn=make_batch)
 
-# model = RecurrentAutoencoder(argslist.n_features, 20, 10)
-# model = model.to(device)
-#
-# loss = train_model(
-#   model,
-#   X_train_iter,
-#   n_epochs=argslist.n_epoch
-# )
+model = RecurrentAutoencoder(argslist.n_features, 20, 10)
+model = model.to(device)
+
+loss = train_model(
+  model,
+  X_train_iter,
+  n_epochs=argslist.n_epoch
+)
 
 with open('model.pt', 'rb') as f:
   model = torch.load(f)
