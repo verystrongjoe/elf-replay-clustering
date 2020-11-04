@@ -5,7 +5,7 @@ use_cuda = torch.cuda.is_available()
 device = torch.device("cuda:0" if use_cuda else "cpu")
 
 home_dir = 'd:/workspace/elf-replay-clustering'
-batch_size = 64
+batch_size = 32
 lr = 1e1
 dropout = 0.1
 n_epoch = 10

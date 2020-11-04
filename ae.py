@@ -156,8 +156,8 @@ class ResNet3D(nn.Module):
         )
 
     def forward(self, x: torch.FloatTensor):
-        """x: (B, T, C * emb_dim, H, W)"""
         x = x.permute(0, 2, 1, 3, 4)  # (B, C *emb_dim, T=20, H, W)
+        print(f'x.shape = {x.shape}')
         x = F.relu(self.bn1(self.conv1(x)))
         x = self.res1(x)
         x = self.res2(x)
@@ -171,16 +171,15 @@ class MoCo(nn.Module):
         super(MoCo, self).__init__()
         self.embeddings = nn.ModuleDict()
         for i in argslist.categorical_feature_idxes:
-            name = f'cf_{i}'
-            self.embeddings[name] = CategoricalEmbedding(
+            cn = f'e_{i}'
+            self.embeddings[cn] = CategoricalEmbedding(
                 category_size=CATEGORICAL_INDEX_SIZES[i],
                 embedding_dim=argslist.embed_dim,
-                name=name
-            )
+                name=cn
+            ).to(argslist.device)
         for i in argslist.numerical_feature_idxes:
-            name = f'nf_{i}'
-            self.embeddings[name] = ScalarEmbedding(argslist.embed_dim, name=name)
-
+            cn = f'e_{i}'
+            self.embeddings[cn] = ScalarEmbedding(argslist.embed_dim, name=cn).to(argslist.device)
         self.device = argslist.device
         self.queue = torch.rand(argslist.proj_dim, argslist.num_negatives, device=argslist.device)
         self.queue = F.normalize(self.queue, dim=0)
@@ -192,7 +191,10 @@ class MoCo(nn.Module):
                 'encoder': ResNet3D(argslist.num_raw_channels * argslist.embed_dim)
             }
         )
+        self.net_q.to(argslist.device)
         self.net_k = copy.deepcopy(self.net_q)
+        self.net_k.to(argslist.device)
+
         for p_k in self.net_k.parameters():
             p_k.requires_grad = False
 
@@ -211,18 +213,21 @@ class MoCo(nn.Module):
         x_q = []
         pos_1 = pos_1.permute(2, 0, 1, 3, 4)
         for i, p1 in enumerate(pos_1):
-            x_q += [self.net_q['embeddings'][i].forward(p1)]  # (B, T, emb_dim, H, W)
+            idx = f'e_{i}'
+            x_q += [self.net_q['embeddings'][idx].forward(p1)]  # (B, T, emb_dim, H, W)
         x_q = torch.cat(x_q, dim=2)                           # (B, T, C * emb_dim, H, W)
-        z_q = F.normalize(self.net_q['encoder'][x_q], dim=1)  # (B, f)
+        print(f'x_q.shape : {x_q.shape}') # ([32, 20, 110, 20, 20])
+        z_q = F.normalize(self.net_q['encoder'](x_q), dim=1)  # (B, f)
 
         # Key net
         x_k = []
         pos_2 = pos_2.permute(2, 0, 1, 3, 4)
         with torch.no_grad():
             for i, p2 in enumerate(pos_2):
-                x_k += [self.net_k['embeddings'][i].forward(p2)]  # (B, T, emb_dim, H, W)
+                cn = f'e_{i}'
+                x_k += [self.net_k['embeddings'][cn].forward(p2)]  # (B, T, emb_dim, H, W)
                 x_k = torch.cat(x_k, dim=2)  # (B, T, C * emb_dim, H, W)
-                z_k = F.normalize(self.net_k['encoder'][x_k], dim=1)  # (B, f)
+                z_k = F.normalize(self.net_k['encoder'](x_k), dim=1)  # (B, f)
 
         logits_pos = torch.einsum('bf,bf->b', [z_q, z_k]).view(-1, 1)  # (B, 1)
         logits_neg = torch.einsum('bf,fk->bk', [z_q, self.queue])      # (B, K); K=negative examples

@@ -25,6 +25,8 @@ class CustomDataset(Dataset):
                 sample = np.load(f)['state']  # TODO: add action here
                 if sample.shape[0] > argslist.sample_len_threshold:
                     self.datalist.append(sample)
+                if len(self.datalist) > 100:
+                    continue
 
             print(f'loading {len(self.datalist)} npz files is finished.')
             d = np.concatenate(self.datalist, axis=0)
@@ -47,7 +49,6 @@ class CustomDataset(Dataset):
         pos_1 = torch.from_numpy(pos_1)
         pos_2 = torch.from_numpy(pos_2)
 
-        print(f'{pos_1.shape[0]}, {pos_2.shape[0]}')
         assert pos_1.shape[0] == pos_2.shape[0]
 
         return dict(pos_1=pos_1, pos_2=pos_2, model_name=model_name, scenario=scenario, frame_skip=frame_skip)
@@ -56,4 +57,4 @@ class CustomDataset(Dataset):
         raise NotImplementedError
 
     def __len__(self):
-        return len(self.filelist)
+        return len(self.datalist)
