@@ -10,7 +10,6 @@ import datetime
 from pytictoc import TicToc
 import argslist
 
-
 use_cuda = torch.cuda.is_available()
 device = torch.device("cuda:0" if use_cuda else "cpu")
 
@@ -113,7 +112,7 @@ class BasicBlock3D(nn.Module):
 
         out = self.conv1(x)
         out = self.bn1(out)
-        out = F.relu(out)
+        out = F.relu(out, inplace=False)
 
         out = self.conv2(out)
         out = self.bn2(out)
@@ -122,7 +121,7 @@ class BasicBlock3D(nn.Module):
             residual = self.downsample(x)
 
         out += self.conv_skip(residual)
-        out = F.relu(out)
+        out = F.relu(out, inplace=False)
 
         return out
 
@@ -151,14 +150,14 @@ class ResNet3D(nn.Module):
         self.avgpool = nn.AdaptiveAvgPool3d(1)  # (B, 256, 1, 1, 1)
         self.mlp = nn.Sequential(
             nn.Linear(256, 256),
-            nn.ReLU(),
+            nn.ReLU(inplace=False),
             nn.Linear(256, 128),
         )
 
     def forward(self, x: torch.FloatTensor):
         x = x.permute(0, 2, 1, 3, 4)  # (B, C *emb_dim, T=20, H, W)
         print(f'x.shape = {x.shape}')
-        x = F.relu(self.bn1(self.conv1(x)))
+        x = F.relu(self.bn1(self.conv1(x)), inplace=False)
         x = self.res1(x)
         x = self.res2(x)
         x = self.res3(x)
@@ -198,6 +197,10 @@ class MoCo(nn.Module):
         for p_k in self.net_k.parameters():
             p_k.requires_grad = False
 
+        # create the queue
+        # self.register_buffer("queue", torch.randn(dim, K))
+        # self.queue = nn.functional.normalize(self.queue, dim=0)
+
     @torch.no_grad()
     def _momentum_update_key_net(self):
         key_momentum = 0.999
@@ -205,37 +208,37 @@ class MoCo(nn.Module):
             p_k.data = key_momentum * p_k.data + (1 - key_momentum) * p_q.data
 
     def forward(self, batch: dict):
+        with torch.autograd.set_detect_anomaly(True):
+            pos_1 = batch['pos_1'].to(self.device)  # (B, T, C, H, W)
+            pos_2 = batch['pos_2'].to(self.device)  # (B, T, C, H, W)
 
-        pos_1 = batch['pos_1'].to(self.device)  # (B, T, C, H, W)
-        pos_2 = batch['pos_2'].to(self.device)  # (B, T, C, H, W)
+            # Query net
+            x_q = []
+            pos_1 = pos_1.permute(2, 0, 1, 3, 4)
+            for i, p1 in enumerate(pos_1):
+                idx = f'e_{i}'
+                x_q += [self.net_q['embeddings'][idx].forward(p1)]  # (B, T, emb_dim, H, W)
+            x_q = torch.cat(x_q, dim=2)                           # (B, T, C * emb_dim, H, W)
+            print(f'x_q.shape : {x_q.shape}') # ([32, 20, 110, 20, 20])
+            z_q = F.normalize(self.net_q['encoder'](x_q), dim=1)  # (B, f)
 
-        # Query net
-        x_q = []
-        pos_1 = pos_1.permute(2, 0, 1, 3, 4)
-        for i, p1 in enumerate(pos_1):
-            idx = f'e_{i}'
-            x_q += [self.net_q['embeddings'][idx].forward(p1)]  # (B, T, emb_dim, H, W)
-        x_q = torch.cat(x_q, dim=2)                           # (B, T, C * emb_dim, H, W)
-        print(f'x_q.shape : {x_q.shape}') # ([32, 20, 110, 20, 20])
-        z_q = F.normalize(self.net_q['encoder'](x_q), dim=1)  # (B, f)
-
-        # Key net
-        x_k = []
-        pos_2 = pos_2.permute(2, 0, 1, 3, 4)
-        with torch.no_grad():
-            for i, p2 in enumerate(pos_2):
-                cn = f'e_{i}'
-                x_k += [self.net_k['embeddings'][cn].forward(p2)]  # (B, T, emb_dim, H, W)
+            # Key net
+            x_k = []
+            pos_2 = pos_2.permute(2, 0, 1, 3, 4)
+            with torch.no_grad():
+                for i, p2 in enumerate(pos_2):
+                    cn = f'e_{i}'
+                    x_k += [self.net_k['embeddings'][cn].forward(p2)]  # (B, T, emb_dim, H, W)
                 x_k = torch.cat(x_k, dim=2)  # (B, T, C * emb_dim, H, W)
                 z_k = F.normalize(self.net_k['encoder'](x_k), dim=1)  # (B, f)
 
-        logits_pos = torch.einsum('bf,bf->b', [z_q, z_k]).view(-1, 1)  # (B, 1)
-        logits_neg = torch.einsum('bf,fk->bk', [z_q, self.queue])      # (B, K); K=negative examples
-        logits = torch.cat([logits_pos, logits_neg], dim=0)            # (B, 1+K)
-        logits.div_(0.2)  # TODO: add to argslist, argslist.temperature
-        target = torch.zeros(logits.size(0), dtype=torch.long, device=self.device)  # indicator of pos example
+            logits_pos = torch.einsum('bf,bf->b', [z_q, z_k]).view(-1, 1)  # (B, 1)
+            logits_neg = torch.einsum('bf,fk->bk', [z_q, self.queue.clone().detach()])      # (B, K); K=negative examples
+            logits = torch.cat([logits_pos, logits_neg], dim=1)            # (B, 1+K)
+            logits = logits.div(0.2)  # TODO: add to argslist, argslist.temperature
+            target = torch.zeros(logits.size(0), dtype=torch.long, device=self.device)  # indicator of pos example
 
-        self._update_queue(z_k)
+            self._update_queue(z_k)
 
         return logits, target
 
@@ -249,6 +252,7 @@ class MoCo(nn.Module):
             optimizer.zero_grad()
             logits, target = model(batch)
             loss = F.cross_entropy(logits, target)
+
             loss.backward()
             optimizer.step()
             train_loss[i] = loss.detach()

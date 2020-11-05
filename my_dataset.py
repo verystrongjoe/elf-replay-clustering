@@ -2,6 +2,7 @@ import os
 import glob
 import numpy as np
 import pandas as pd
+import random
 import torch
 from torch.utils.data import Dataset, DataLoader, TensorDataset
 import pickle
@@ -19,6 +20,9 @@ class CustomDataset(Dataset):
         self.root_dir = os.path.join(argslist.home_dir, 'features')
         self.filelist = sorted(glob.glob(os.path.join(self.root_dir, "**/*.npz"), recursive=True))
         self.datalist = []
+
+        # for i in range(80):
+        #     self.datalist.append(np.random.random((70, 22, 20, 20)))
 
         if not os.path.isfile('list.data'):
             for f in self.filelist:
@@ -43,6 +47,10 @@ class CustomDataset(Dataset):
             scenario = '-'.join([scenario, tmp])  # hit, run -> hit-run
         except ValueError:
             model_name, scenario, frame_skip, _ = replay_name.split('_')
+
+        # model_name = random.choice(['9996', '45552'])
+        # scenario = random.choice(['simple', 'hit-run'])
+        # frame_skip = random.choice(['20', '50', '60'])
 
         pos_1 = sample[argslist.sampling_tuple_idx_1:argslist.sampling_tuple_idx_1+self.window_size]  # (T, C, h, w); C=channels
         pos_2 = sample[argslist.sampling_tuple_idx_2:argslist.sampling_tuple_idx_2+self.window_size]  # (T, C, h, w); T=window_size
