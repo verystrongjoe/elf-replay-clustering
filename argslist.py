@@ -4,11 +4,11 @@ import torch
 use_cuda = torch.cuda.is_available()
 device = torch.device("cuda:0" if use_cuda else "cpu")
 
-home_dir = 'd:/workspace/elf-replay-clustering'
-batch_size = 64
-lr = 1e1
+home_dir = '/workspace/raid/Workspace/ukjo/elf-replay-clustering'
+batch_size = 128
+lr = 1e-2
 dropout = 0.1
-n_epoch = 10
+n_epoch = 1000
 n_features = 400
 
 num_negatives = 8192
@@ -26,3 +26,4 @@ embed_dim = 5 # 모든 채널이 embedding을 개별로 가지나 출력 dim은 
 proj_dim = 128
 window_size = 20
 
+temperature = 0.1

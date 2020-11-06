@@ -1,24 +1,42 @@
 from torch.utils.data import DataLoader
 from my_dataset import CustomDataset
 from ae import *
+from torch.utils.tensorboard import SummaryWriter
+import argparse
+import numpy as np
 import argslist
-import logging
-import torch
+
+
+
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument('t', type=float, help='moco temperature')
+parser.add_argument('lr', type=float, help='learning rate')
+parser.add_argument('num_gpu', type=int, help='num of gpu be used')
+
+args = parser.parse_args()
+
+argslist.temperature = args.t
+argslist.lr = args.lr
+num_gpu = args.num_gpu
+
 
 # # GPU 할당 변경하기
-GPU_NUM = 1  # 원하는 GPU 번호 입력
+GPU_NUM = num_gpu  # 원하는 GPU 번호 입력
 device = torch.device(f'cuda:{GPU_NUM}' if torch.cuda.is_available() else 'cpu')
 torch.cuda.set_device(device)  # change allocation of current GPU
 print('Current cuda device ', torch.cuda.current_device())  # check
 argslist.device = device
 
 
-# Additional Infos
-if device.type == 'cuda':
-    print(torch.cuda.get_device_name(GPU_NUM))
-    print('Memory Usage:')
-    print('Allocated:', round(torch.cuda.memory_allocated(GPU_NUM)/1024**3,1), 'GB')
-    print('Cached:   ', round(torch.cuda.memory_cached(GPU_NUM)/1024**3,1), 'GB')
+writer = SummaryWriter(f'runs/{}_{}_moco')
+
+
+use_cuda = torch.cuda.is_available()
+device = torch.device("cuda:0" if use_cuda else "cpu")
+print(device)
+
 
 
 def main():
@@ -44,6 +62,7 @@ def main():
         if e % 100 == 0: 
             print(f'{e} epoch trained.')
             torch.save(moco.state_dict(), f'moco-epoch_{e}.pt')
+        writer.add_scalar('training_epoch_loss', epoch_loss, epoch)
     print('trained finished..')
     torch.save(moco.state_dict(), 'moco_final.pt')
 
