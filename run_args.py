@@ -30,7 +30,7 @@ print('Current cuda device ', torch.cuda.current_device())  # check
 argslist.device = device
 
 
-writer = SummaryWriter(f'runs/{}_{}_moco')
+writer = SummaryWriter(f'runs/{argslist.temperature}_{argslist.lr}_moco')
 
 
 use_cuda = torch.cuda.is_available()

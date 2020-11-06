@@ -4,7 +4,7 @@ import torch
 use_cuda = torch.cuda.is_available()
 device = torch.device("cuda:0" if use_cuda else "cpu")
 
-home_dir = '/workspace/raid/Workspace/ukjo/elf-replay-clustering'
+home_dir = '/workspace/elf-replay-clustering'
 batch_size = 128
 lr = 1e-2
 dropout = 0.1
@@ -14,8 +14,11 @@ n_features = 400
 num_negatives = 8192
 num_raw_channels = 22
 
+#categorical_feature_idxes = [0,1,2,3,4,5,17,18,19]
+#numerical_feature_idxes = [i for i in range(1, 22) if i not in categorical_feature_idxes]
+numerical_feature_idxes = [6,7]
 categorical_feature_idxes = [0,1,2,3,4,5,17,18,19]
-numerical_feature_idxes = [i for i in range(1, 22) if i not in categorical_feature_idxes]
+
 
 # sampling_length = 10  #  리플레이별 positive pair 각 길이
 sampling_tuple_idx_1 = 1   # positive pair 처음꺼
