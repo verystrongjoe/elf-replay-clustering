@@ -156,7 +156,6 @@ class ResNet3D(nn.Module):
 
     def forward(self, x: torch.FloatTensor):
         x = x.permute(0, 2, 1, 3, 4)  # (B, C *emb_dim, T=20, H, W)
-        #print(f'x.shape = {x.shape}')
         x = F.relu(self.bn1(self.conv1(x)), inplace=False)
         x = self.res1(x)
         x = self.res2(x)
@@ -219,7 +218,6 @@ class MoCo(nn.Module):
                 idx = f'e_{i}'
                 x_q += [self.net_q['embeddings'][idx].forward(p1)]  # (B, T, emb_dim, H, W)
             x_q = torch.cat(x_q, dim=2)                           # (B, T, C * emb_dim, H, W)
-            #print(f'x_q.shape : {x_q.shape}') # ([32, 20, 110, 20, 20])
             z_q = F.normalize(self.net_q['encoder'](x_q), dim=1)  # (B, f)
 
             # Key net
