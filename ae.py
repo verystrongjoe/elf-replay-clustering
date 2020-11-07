@@ -215,7 +215,8 @@ class MoCo(nn.Module):
             x_q = []
             pos_1 = pos_1.permute(2, 0, 1, 3, 4)
             for i, p1 in enumerate(pos_1):
-                idx = f'e_{i}'
+                real_idx = argslist.feature_idxes[i]
+                idx = f'e_{real_idx}'
                 x_q += [self.net_q['embeddings'][idx].forward(p1)]  # (B, T, emb_dim, H, W)
             x_q = torch.cat(x_q, dim=2)                           # (B, T, C * emb_dim, H, W)
             z_q = F.normalize(self.net_q['encoder'](x_q), dim=1)  # (B, f)
@@ -225,7 +226,8 @@ class MoCo(nn.Module):
             pos_2 = pos_2.permute(2, 0, 1, 3, 4)
             with torch.no_grad():
                 for i, p2 in enumerate(pos_2):
-                    cn = f'e_{i}'
+                    real_idx = argslist.feature_idxes[i]
+                    cn = f'e_{real_idx}'
                     x_k += [self.net_k['embeddings'][cn].forward(p2)]  # (B, T, emb_dim, H, W)
                 x_k = torch.cat(x_k, dim=2)  # (B, T, C * emb_dim, H, W)
                 z_k = F.normalize(self.net_k['encoder'](x_k), dim=1)  # (B, f)

@@ -17,8 +17,9 @@ num_raw_channels = 22
 
 #categorical_feature_idxes = [0,1,2,3,4,5,17,18,19]
 #numerical_feature_idxes = [i for i in range(1, 22) if i not in categorical_feature_idxes]
-numerical_feature_idxes = [6,7]
-categorical_feature_idxes = [0,1,2,3,4,5,17,18,19]
+numerical_feature_idxes = [6, 7]
+categorical_feature_idxes = [0, 1, 2, 3, 4, 5, 17, 18, 19]
+feature_idxes = [0, 1, 2, 3, 4, 5, 6, 7, 17, 18, 19]
 
 
 # sampling_length = 10  #  리플레이별 positive pair 각 길이
