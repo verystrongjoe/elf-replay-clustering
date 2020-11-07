@@ -13,7 +13,7 @@ n_epoch = 1000
 n_features = 400
 
 num_negatives = 8192
-num_raw_channels = 22
+num_raw_channels = 11
 
 #categorical_feature_idxes = [0,1,2,3,4,5,17,18,19]
 #numerical_feature_idxes = [i for i in range(1, 22) if i not in categorical_feature_idxes]
