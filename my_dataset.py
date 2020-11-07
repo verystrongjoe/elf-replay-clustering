@@ -63,8 +63,8 @@ class CustomDataset(Dataset):
         idx_1 = random.randint(first, middle - argslist.window_size)
         idx_2 = random.randint(middle, last - argslist.window_size)
 
-        pos_1 = sample[idx_1:idx_1+self.window_size, 0, 1, 2, 3, 4, 5, 6, 7, 17, 18, 19]  # (T, C, h, w); C=channels
-        pos_2 = sample[idx_2:idx_2+self.window_size, 0, 1, 2, 3, 4, 5, 6, 7, 17, 18, 19]  # (T, C, h, w); T=window_size
+        pos_1 = sample[idx_1:idx_1+self.window_size, [0, 1, 2, 3, 4, 5, 6, 7, 17, 18, 19]]  # (T, C, h, w); C=channels
+        pos_2 = sample[idx_2:idx_2+self.window_size, [0, 1, 2, 3, 4, 5, 6, 7, 17, 18, 19]]  # (T, C, h, w); T=window_size
         pos_1 = torch.from_numpy(pos_1)
         pos_2 = torch.from_numpy(pos_2)
 
