@@ -44,9 +44,9 @@ moco = moco.to(device)
 
 train_set = CustomDataset(window_size=argslist.window_size)
 
-train_loader = DataLoader(
+data_loader = DataLoader(
     train_set,
-    batch_size=argslist.batch_size,  # 256
+    batch_size=len(train_set),  # 256
     shuffle=True,
     num_workers=1,
     drop_last=True,
