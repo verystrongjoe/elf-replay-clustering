@@ -9,6 +9,7 @@ from torch.optim.lr_scheduler import LambdaLR
 import math
 import os
 import numpy as np
+import pickle
 
 parser = argparse.ArgumentParser()
 parser.add_argument('t', type=float, help='moco temperature')
@@ -32,27 +33,13 @@ use_cuda = torch.cuda.is_available()
 device = torch.device("cuda:0" if use_cuda else "cpu")
 print(device)
 
-# datalist = np.load('list.dat.npy')
-# print(f'loading {len(datalist)} npz files is finished.')
+def save_obj(obj, name):
+    with open(name + '.pkl', 'wb') as f:
+        pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
 
-model_fn = 'moco-epoch_moco_0.05_0.1_1_2600.pt'
-moco = MoCo()
-model_dic = torch.load(model_fn, map_location=device)
-moco.load_state_dict(model_dic)
-type(moco)
-moco = moco.to(device)
-
-train_set = CustomDataset(window_size=argslist.window_size)
-
-data_loader = DataLoader(
-    train_set,
-    batch_size=len(train_set),  # 256
-    shuffle=True,
-    num_workers=1,
-    drop_last=True,
-    pin_memory=True,
-)
-
+def load_obj(name):
+    with open(name + '.pkl', 'rb') as f:
+        return pickle.load(f)
 
 def inference(m, batch):
     with torch.autograd.set_detect_anomaly(True):
@@ -70,18 +57,41 @@ def inference(m, batch):
     return z_q.detach().cpu().numpy()
 
 
-feature_list = []
+# datalist = np.load('list.dat.npy')
+# print(f'loading {len(datalist)} npz files is finished.')
 
-for i, batch in enumerate(data_loader):
-    print(f'i : {i} batch : {batch}')
+if __name__ =='__main__':
+    model_fn = 'moco-epoch_moco_0.05_0.1_1_2600.pt'
+    moco = MoCo()
+    model_dic = torch.load(model_fn, map_location=device)
+    moco.load_state_dict(model_dic)
+    type(moco)
+    moco = moco.to(device)
 
-    with open(f'inputs_{i}.dat', 'wb') as f:
-        f.write(batch)
+    train_set = CustomDataset(window_size=argslist.window_size)
 
-    features = inference(moco, batch)
-    print(f'{idx} sample got feature.')
+    data_loader = DataLoader(
+        train_set,
+        batch_size=len(train_set),  # 256
+        shuffle=True,
+        num_workers=1,
+        drop_last=True,
+        pin_memory=True,
+    )
 
-    with open(f'features_{i}.dat', 'wb') as f:
-        f.write(feature_list)
+
+
+    feature_list = []
+
+    for i, batch in enumerate(data_loader):
+        print(f'i : {i} batch : {batch}')
+
+        save_obj(batch, f'inputs_{i}.dat')
+
+        features = inference(moco, batch)
+        print(f'{i} sample got feature.')
+
+        save_obj(feature_list, f'features_{i}.dat')
+
 
 
