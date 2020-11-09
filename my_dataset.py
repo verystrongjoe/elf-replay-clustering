@@ -24,20 +24,19 @@ class CustomDataset(Dataset):
         # for i in range(80):
         #     self.datalist.append(np.random.random((70, 22, 20, 20)))
 
-        if not os.path.isfile('list.data'):
+        if not os.path.isfile('list.data.npy'):
             for f in self.filelist:
                 sample = np.load(f)['state']  # TODO: add action here
                 if sample.shape[0] > argslist.sample_len_threshold:
                     self.datalist.append(sample)
                 if len(self.datalist) > 100:
                     continue
-
             print(f'loading {len(self.datalist)} npz files is finished.')
             d = np.concatenate(self.datalist, axis=0)
             np.save('list.dat', d)
         else:
-            print(f'loading pickle file is finished.')
-            np.load('list.dat')
+            self.datalist = np.load('list.dat.npy')
+            print(f'loading {len(self.datalist)} npz files is finished.')
 
     def __getitem__(self, idx):
         sample = self.datalist[idx]
