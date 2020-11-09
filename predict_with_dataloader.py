@@ -72,8 +72,8 @@ if __name__ =='__main__':
 
     data_loader = DataLoader(
         train_set,
-        batch_size=len(train_set),  # 256
-        shuffle=True,
+        batch_size=argslist.batch_size,  # 256
+        shuffle=False,
         num_workers=1,
         drop_last=True,
         pin_memory=True,
@@ -81,9 +81,8 @@ if __name__ =='__main__':
 
 
 
-    feature_list = []
-
     for i, batch in enumerate(data_loader):
+        feature_list = []
         print(f'i : {i} batch : {batch}')
 
         save_obj(batch, f'inputs_{i}.dat')
