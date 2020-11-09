@@ -32,23 +32,22 @@ use_cuda = torch.cuda.is_available()
 device = torch.device("cuda:0" if use_cuda else "cpu")
 print(device)
 
-print(f'loading pickle file is finished.')
 datalist = np.load('list.dat.npy')
-
-print(f'loading {len(self.datalist)} npz files is finished.')
+print(f'loading {len(datalist)} npz files is finished.')
 
 model_fn = 'moco-epoch_moco_0.05_0.1_1_2600.pt'
 moco = MoCo()
-model_dic = torch.load(model_fn)
+model_dic = torch.load(model_fn, map_location=device)
 moco.load_state_dict(model_dic)
-moco.to(device)
+type(moco)
+moco = moco.to(device)
 
 
 feature_list = []
 
 for idx in range(len(datalist)):
     sample = datalist[idx]
-    replay_name = os.path.basename(self.filelist[idx]).split('.')[0]
+    replay_name = os.path.basename(filelist[idx]).split('.')[0]
     try:
         model_name, scenario, tmp, frame_skip, _ = replay_name.split('_')
         scenario = '-'.join([scenario, tmp])  # hit, run -> hit-run
@@ -62,8 +61,8 @@ for idx in range(len(datalist)):
     idx_1 = random.randint(first, middle - argslist.window_size)
     idx_2 = random.randint(middle, last - argslist.window_size)
 
-    pos_1 = sample[idx_1:idx_1 + self.window_size, [0, 1, 2, 3, 4, 5, 6, 7, 17, 18, 19]]  # (T, C, h, w); C=channels
-    pos_2 = sample[idx_2:idx_2 + self.window_size, [0, 1, 2, 3, 4, 5, 6, 7, 17, 18, 19]]  # (T, C, h, w); T=window_size
+    pos_1 = sample[idx_1:idx_1 + 20, [0, 1, 2, 3, 4, 5, 6, 7, 17, 18, 19]]  # (T, C, h, w); C=channels
+    pos_2 = sample[idx_2:idx_2 + 20, [0, 1, 2, 3, 4, 5, 6, 7, 17, 18, 19]]  # (T, C, h, w); T=window_size
     pos_1 = torch.from_numpy(pos_1)
     pos_2 = torch.from_numpy(pos_2)
 
